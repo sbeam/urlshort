@@ -44,19 +44,25 @@ type Short struct {
 	Url  string
 }
 
-func YAMLHandler(yml []byte, fallback http.Handler) (handler http.HandlerFunc, err error) {
-	var shorts []Short
-
+func parseYAML(yml []byte) (shorts []Short, err error) {
 	err = yaml.Unmarshal(yml, &shorts)
+	return
+}
 
+func makeMapFromShorts(shorts []Short) (urlMap map[string]string) {
+	urlMap = make(map[string]string)
+	for _, short := range shorts {
+		urlMap[short.Path] = short.Url
+	}
+	return
+}
+
+func YAMLHandler(yml []byte, fallback http.Handler) (handler http.HandlerFunc, err error) {
+	shorts, err := parseYAML(yml)
 	if err != nil {
 		return
 	}
 
-	urlMap := make(map[string]string)
-	for _, short := range shorts {
-		urlMap[short.Path] = short.Url
-	}
-	handler = MapHandler(urlMap, fallback)
+	handler = MapHandler(makeMapFromShorts(shorts), fallback)
 	return
 }
