@@ -14,6 +14,7 @@ func main() {
 	var (
 		yamlFile = flag.String("yaml", "", "path to YAML URL mappings")
 		jsonFile = flag.String("json", "", "path to JSON URL mappings")
+		dbPath   = flag.String("dbPath", "", "path to use the bolt db")
 	)
 	flag.Parse()
 
@@ -25,6 +26,7 @@ func main() {
 		"/yaml-godoc":     "https://godoc.org/gopkg.in/yaml.v2",
 	}
 	handler := urlshort.MapHandler(pathsToUrls, mux)
+	fmt.Printf("loaded %d shorts from map\n", len(pathsToUrls))
 
 	if *yamlFile != "" {
 		yamlconfig, err := ioutil.ReadFile(*yamlFile)
@@ -47,6 +49,14 @@ func main() {
 		}
 
 		handler, err = urlshort.JSONHandler([]byte(jsondata), handler)
+		if err != nil {
+			log.Fatalln(err)
+		}
+	}
+
+	if *dbPath != "" {
+		var err error
+		handler, err = urlshort.DBHandler(*dbPath, handler)
 		if err != nil {
 			log.Fatalln(err)
 		}

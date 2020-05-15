@@ -1,0 +1,14 @@
+[
+  {
+    "path": "/a",
+    "url": "https://apple.com"
+  },
+  {
+    "path": "/b",
+    "url": "https://bloomberg.com"
+  },
+  {
+    "path": "/c",
+    "url": "https://cnn.com"
+  }
+]

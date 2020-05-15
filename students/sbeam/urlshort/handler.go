@@ -2,6 +2,8 @@ package urlshort
 
 import (
 	"encoding/json"
+	"fmt"
+	"github.com/boltdb/bolt"
 	"gopkg.in/yaml.v2"
 	"net/http"
 )
@@ -64,6 +66,7 @@ func YAMLHandler(yml []byte, fallback http.Handler) (handler http.HandlerFunc, e
 		return
 	}
 
+	fmt.Printf("loaded %d shorts from YAML config\n", len(shorts))
 	handler = MapHandler(makeMapFromShorts(shorts), fallback)
 	return
 }
@@ -71,6 +74,44 @@ func YAMLHandler(yml []byte, fallback http.Handler) (handler http.HandlerFunc, e
 func JSONHandler(jsonConfig []byte, fallback http.Handler) (handler http.HandlerFunc, err error) {
 	var shorts []Short
 	err = json.Unmarshal([]byte(jsonConfig), &shorts)
+
+	fmt.Printf("loaded %d shorts from JSON config\n", len(shorts))
+	if err != nil {
+		return
+	}
+
+	handler = MapHandler(makeMapFromShorts(shorts), fallback)
+	return
+}
+
+func DBHandler(boltDBPath string, fallback http.Handler) (handler http.HandlerFunc, err error) {
+	var shortsBucket = []byte("shortsBucket")
+	var dbConn *bolt.DB
+	var shorts []Short
+
+	dbConn, err = bolt.Open(boltDBPath, 0644, &bolt.Options{ReadOnly: true})
+	if err != nil {
+		return
+	}
+
+	err = dbConn.View(func(tx *bolt.Tx) error {
+		bucket := tx.Bucket(shortsBucket)
+		if bucket == nil {
+			bucket, err = tx.CreateBucket(shortsBucket)
+			if err != nil {
+				return fmt.Errorf("create bucket: %s", err)
+			}
+		}
+		cursor := bucket.Cursor()
+		for k, v := cursor.First(); k != nil; k, v = cursor.Next() {
+			shorts = append(shorts, Short{
+				Path: string(k),
+				Url:  string(v),
+			})
+		}
+		fmt.Printf("loaded %d shorts from DB\n", len(shorts))
+		return nil
+	})
 
 	if err != nil {
 		return
